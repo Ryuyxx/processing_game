@@ -5,395 +5,548 @@ final int GRID_SPACE = 25;
 final int MAKE_TIME = 60*2;   
 final int EXIST_TIME = 60*3;
 
-ArrayList <Integer> enemy_hp=new ArrayList<Integer>();
+int SCORE = 0;
+boolean GameJudge = true;
 
-ArrayList<Block> allBlocks = new ArrayList<Block>();   
+ArrayList<Block> allBCK = new ArrayList<Block>();
 Player player; 
 
 
-void setup(){
-    size(800,600); 
-    player = new Player(width/2, height/2, 30); 
+void setup() {
+  size(800, 600); 
+  //size(showWidth,showHeight);
+  player = new Player(width/2, height/2, 30);
 }
 
 
 void draw( ) {
-    drawBackground();
-    drawAllBlocks();
+  if (GameJudge==true) {
+    drawBG();
+    drawAllBlk();
     drawPlayer();
-    if(frameCount % MAKE_TIME == 0 && allBlocks.size() < MAX_BLK){
-        addBlock();
+    if (frameCount % MAKE_TIME == 0 && allBCK.size() < MAX_BLK) {
+      addBLK();
     }
-    for(int i=0;i<allBlocks.size();i++){
-      //if(){
-     // }
-    }
+    drawSCORE();
+  } else if (GameJudge!=true) {
+    GameOver();
+  }
+}
+void GameOver() {
+  int ms = millis()/1000;
+  int TimeLimit = 15;
+  int CountDown; 
+  CountDown = TimeLimit - ms;
+  if (CountDown > 0) {
+    drawBG();
+    drawAllBlk();
+    drawSCORE();
+    textSize(80);
+    fill(#F6FF0D);
+    text("GAME OVER", 160, height/2);
+    textSize(30);
+    fill(#0D12FF);
+    text("RESTART : "+CountDown, 290, height/2-80);
+  } else {
+    GameJudge=true;
+    init();
+  }
+}
+void drawSCORE() {
+  textSize(24);
+  fill(#FC7FA1);
+  text("SCORE: "+SCORE, 10, 30);
+}
+void test() {
 }
 
-/*
-boolean hitCheck(Bullet bullet, Block block ){
-   float dx,dy,dr;
-   dx = abs(bullet.x - block.pointX);
-   dy = abs(bullet.y - block.pointY);
-   dr = bullet.r/2 + block.collisionR;
-
-   return ( sqrt( sq(dx) + sq(dy) ) < dr );
-}
-*/
+void drawBG() {
+  background(BCK_COLOR);
+  strokeWeight(1);   
 
 
-void drawBackground(){
-    background(BCK_COLOR);
-    strokeWeight(1);   
-
-    
-    for(int i = 0; i < width /GRID_SPACE; i++){
-        stroke(LINE_COLOR);
-        line(GRID_SPACE*i, 0, GRID_SPACE * i, height);
-    }
-    for(int i = 0; i < height /GRID_SPACE; i++){
-        stroke(LINE_COLOR);
-        line(0, GRID_SPACE*i, width, GRID_SPACE*i);
-    }
+  for (int i = 0; i < width /GRID_SPACE; i++) {
+    stroke(LINE_COLOR);
+    line(GRID_SPACE*i, 0, GRID_SPACE * i, height);
+  }
+  for (int i = 0; i < height /GRID_SPACE; i++) {
+    stroke(LINE_COLOR);
+    line(0, GRID_SPACE*i, width, GRID_SPACE*i);
+  }
 }
 
-void drawAllBlocks(){
-    for(int i = 0; i < allBlocks.size(); i++){
-        allBlocks.get(i).display();
-    }
+void drawAllBlk() {
+  for (int i = 0; i < allBCK.size(); i++) {
+    allBCK.get(i).show();
+  }
 }
-void drawPlayer(){
-    player.display();
-}
-
-void addBlock(){
-    switch(int(random(4))){
-        case 0: allBlocks.add(new Rectangle(random(width), random(height)));break;
-        case 1: allBlocks.add(new Triangle(random(width), random(height)));break;
-        case 2: allBlocks.add(new Pentagon(random(width), random(height)));break;
-        case 3: allBlocks.add(new Hexagon(random(width), random(height)));break;
-        default: break;
-    }
-    enemy_hp.add(100);
-    //if(i==5){allBlocks.remove(0);}
+void drawPlayer() {
+  player.show();
 }
 
+void addBLK() {
+  float x, y;
+  int RecHP = 40;
+  int TriHP = 20;
+  int PenHP = 60;
+  int HexHP = 80;
+  x=random(width);
+  y=random(height);
+  switch(int(random(4))) {
+  case 0: 
+    allBCK.add(new Rectangle4(x, y, RecHP));
+    break;
+  case 1: 
+    allBCK.add(new Triangle3 (x, y, TriHP));
+    break;
+  case 2: 
+    allBCK.add(new Pentagon5(x, y, PenHP));
+    break;
+  case 3: 
+    allBCK.add(new Hexagon6(x, y, HexHP));
+    break;
+  default: 
+    break;
+  }
 
-abstract class Tank {
-    protected float x, y;
-    protected int r;
-    protected float angle;
-    protected ArrayList<Bullet> bullets;
-
-    abstract void display();
-    abstract void move();
+  //if(i==5){allBCK.remove(0);}
 }
 
+ArrayList<Tama> Tamas=new ArrayList<Tama>();
+abstract class Base {
+  protected float x, y;
+  protected int r;
+  protected float angle;
+  //protected ArrayList<Tama> Tamas;
 
-class Player extends Tank{
-
-   
-    final color FILL_COLOR = color(0,178,225);  
-    final color BATTERY_COLOR = color(153); 
-    int movementSpeed = 2;  
-    int bulletSpeed = 5;    
-    int reloadTime = 60;    
-    int elapsedTimeAfterFire = 60;  
-
-    
-    Player(float x, float y, int r){
-        this.x = x;
-        this.y = y;
-        this.r = r;
-        this.bullets = new ArrayList<Bullet>();
-    }
-
-    
-    int test = 0;
-    boolean isBack = true;
-
-
-    void display(){
-        drawBullets();
-
-        stroke(93);
-        strokeWeight(3);
-        pushMatrix();
-
-        translate(x,y);
-        rotate(angle);
-
-        fill(BATTERY_COLOR);
-        rect(test,0-r/4,r, r/2,1);
-
-        /*
-        if(isBack && test > -5){
-             test--;
-         }else if(isBack && test <= -5){
-             isBack = false;
-         }else if(!isBack && test < 0){
-             test++;
-         }else if(!isBack && test >= 0){
-             isBack = true;
-         }
-         */
-
-        fill(FILL_COLOR);
-        ellipse(0,0,r,r);
-
-        popMatrix();
-
-        updateAngle();
-        move();
-        if(mousePressed && mouseButton == LEFT && player.elapsedTimeAfterFire > player.reloadTime){
-            player.shot();
-        }
-        elapsedTimeAfterFire++;
-    }
-
-    void shot(){
-        bullets.add(new Bullet(x, y, bulletSpeed, angle, FILL_COLOR));
-        elapsedTimeAfterFire = 0;
-    }
-
-    void move(){
-        float addPos = movementSpeed;
-        if((leftKeyDown || rightKeyDown) && (upKeyDown || downKeyDown)){
-            addPos = movementSpeed / sqrt(2);
-        }
-        if(leftKeyDown){
-            x -= addPos;
-        }
-        if(rightKeyDown){
-            x += addPos;
-        }
-        if(upKeyDown){
-            y -= addPos;
-        }
-        if(downKeyDown){
-            y += addPos;
-        }
-    }
-
-    private void updateAngle(){
-        this.angle = atan2(mouseY - this.y, mouseX - this.x);
-    }
-
-    private void drawBullets(){
-        for(int i = 0; i < bullets.size(); i++){
-            Bullet bullet = bullets.get(i);
-            bullet.display();
-            if(!bullet.isExist()){
-                bullets.remove(bullet);
-            }
-        }
-    }
-
+  abstract void show();
+  abstract void move();
 }
 
+void init() {
+  allBCK.clear();
+  Tamas.clear();
 
-class Bullet {
+  SCORE=0;
+  player.movementSpeed=2;
+  player.bulletSpeed = 5;    
+  player.reloadTime = 60; 
+  player.Damage =20;
+  player.flag=true;
+  player.isBack = true;
+  player =new Player(width/2, height/2, 30);
+}
+
+class Player extends Base {
 
 
-    float x, y;
-    private float speedX, speedY;
-    private int r = 15;   
-    private color fillColor;
-    private int life;
+  final color FILL_COLOR = color(0, 178, 225);  
+  final color BATTERY_COLOR = color(153); 
+  int movementSpeed = 2;  
+  int bulletSpeed = 5;    
+  int reloadTime = 60;    
+  int timeCheck = 60;  //time after shot
+  int Damage =20;
 
-    Bullet(float x, float y, int speed, float angle, color fillColor){
-        this.x = x;
-        this.y = y;
-        this.speedX = speed * cos(angle);
-        this.speedY = speed * sin(angle);
-        this.fillColor = fillColor;
-        this.life = EXIST_TIME;
+
+  Player(float x, float y, int r) {
+    this.x = x;
+    this.y = y;
+    this.r = r;
+    //this.Tamas = new ArrayList<Tama>();
+  }
+
+
+  int test = 0;
+  boolean isBack = true;
+  boolean flag = true;
+
+
+  void show() {
+    drawTamas();
+
+    stroke(93);
+    strokeWeight(3);
+    pushMatrix();
+
+    translate(x, y);
+    rotate(angle);
+
+    fill(BATTERY_COLOR);
+    rect(test, 0-r/4, r, r/2, 1);
+
+    fill(FILL_COLOR);
+    ellipse(0, 0, r, r);
+
+    popMatrix();
+
+    updateAngle();
+    move();
+    lvlUP();
+    HitCheck();
+    if (mousePressed && mouseButton == LEFT && player.timeCheck > player.reloadTime) {
+      player.shot();
     }
+    timeCheck++;
+  }
 
-    void display(){
-        fill(fillColor);
-        stroke(93);
-        strokeWeight(2);
+  void shot() {
+    Tamas.add(new Tama(x, y, bulletSpeed, angle, FILL_COLOR, Damage));
+    timeCheck = 0;
+  }
 
-        ellipse(x,y,r,r);
-        move();
-        this.life--;
+  void lvlUP() {
+    println(flag);
+    if (SCORE%50==0 && flag == false){
+      flag = true;
     }
-    private void move(){
-        x += speedX;
-        y += speedY;
+    if (SCORE>=200){
+      if (flag) {
+        println("level up");
+        movementSpeed = SCORE / 50;
+        bulletSpeed = SCORE / 15;    
+        reloadTime = SCORE / 10;
+        flag = !flag;
+      }
     }
-    boolean isExist(){
-        if(life < 0){
-            return false;
-        }else{
-            return true;
+    else if (SCORE==200) {
+      if (flag) {
+        println("Level UP"); 
+        movementSpeed +=1;
+        bulletSpeed +=3;    
+        reloadTime -= 10;
+        Damage+=20;
+
+        lvlUPdraw4();
+        flag=false;
+      }
+    } else if (SCORE==100) {
+      if (!flag) {
+        movementSpeed +=1;
+        bulletSpeed += 3;    
+        reloadTime -=10;
+
+        lvlUPdraw3();
+        flag=true;
+      }
+    } else if (SCORE==50) {
+      if (flag) {
+        reloadTime-=10;
+
+        lvlUPdraw2();
+        flag=false;
+      }
+    }
+  }
+
+  void lvlUPdraw2() {
+    println("--------------------------------");
+    println("Level UP: Lvl: 2;"); 
+    println();
+    println("reloadTime 60 → "+reloadTime);
+    println("--------------------------------");
+  }
+
+  void lvlUPdraw3() {
+    println("--------------------------------");
+    println("Level UP: Lvl: 3;"); 
+    println();
+    println("reloadTime 40 → "+reloadTime);
+    println("movementSpeed 2 → "+movementSpeed);
+    println("bulletSpeed 5 → "+bulletSpeed);
+    println("--------------------------------");
+  }
+
+  void lvlUPdraw4() {
+    println("--------------------------------");
+    println("Level UP: Lvl: 4;"); 
+    println();
+    println("reloadTime 50 → "+reloadTime);
+    println("movementSpeed 3 → "+movementSpeed);
+    println("bulletSpeed 8 → "+bulletSpeed);
+    println("Damage 20 → "+Damage);
+    println("--------------------------------");
+  }
+
+  void move() {
+    float addPos = movementSpeed;
+    if ((leftKeyDown || rightKeyDown) && (upKeyDown || downKeyDown)) {
+      addPos = movementSpeed / sqrt(2);
+    }
+    if (leftKeyDown) {
+      x -= addPos;
+    }
+    if (rightKeyDown) {
+      x += addPos;
+    }
+    if (upKeyDown) {
+      y -= addPos;
+    }
+    if (downKeyDown) {
+      y += addPos;
+    }
+    //println(x, y);
+  }
+
+  private void updateAngle() {
+    this.angle = atan2(mouseY - this.y, mouseX - this.x);
+  }
+
+  private void drawTamas() {
+    for (int i = 0; i < Tamas.size(); i++) {
+      Tama bullet = Tamas.get(i);
+      bullet.show();
+      if (!bullet.isExist()) {
+        Tamas.remove(bullet);
+      }
+    }
+  }
+  private void HitCheck() {
+    float Plx, Ply, Blx, Bly;
+    Plx=x;
+    Ply=y;
+    //println(Plx, Ply);
+    for (int j=0; j<allBCK.size(); j++) {
+      Block tempBlock =(Block)allBCK.get(j);
+      Blx=tempBlock.x;
+      Bly=tempBlock.y;
+      if ( CheckMan2(Plx, Ply, Blx, Bly)) {
+        GameJudge=false;
+      }
+    }
+  }
+}
+
+class Tama {
+
+
+  float x, y;
+  private float speedX, speedY;
+  private int r = 15;   //chokkei
+  private color fillColor;
+  private int life;
+  int Dam;
+
+  Tama(float x, float y, int speed, float angle, color fillColor, int Dam) {
+    this.x = x;
+    this.y = y;
+    this.speedX = speed * cos(angle);
+    this.speedY = speed * sin(angle);
+    this.fillColor = fillColor;
+    this.life = EXIST_TIME;
+    this.Dam = Dam;
+  }
+  void show() {
+    fill(fillColor);
+    stroke(93);
+    strokeWeight(2);
+
+    ellipse(x, y, r, r);
+    move(); 
+    HitCheck();
+    this.life--;
+  }
+  private void move() {
+    x += speedX;
+    y += speedY;
+  }
+  private void HitCheck() {
+    float Bux, Buy, Blx, Bly;
+    int health;
+    for (int i=0; i<Tamas.size(); i++) {
+      Tama temp = (Tama)Tamas.get(i);
+      Bux = temp.x;
+      Buy = temp.y;
+      for (int j=0; j<allBCK.size(); j++) {
+        Block tempBlock =(Block)allBCK.get(j);
+        Blx=tempBlock.x;
+        Bly=tempBlock.y;
+        health=tempBlock.HP;
+        if ( CheckMan(Bux, Buy, Blx, Bly)) {
+          tempBlock.HP= tempBlock.HP-Dam;
+          Tamas.remove(i);
+          if (health<=0) {
+            allBCK.remove(j);
+            SCORE+=10;
+            println("SCORE: "+SCORE);
+            //println("BlockNumber: "+allBCK.size());
+            //println("TamaNumber: "+Tamas.size());
+          }
         }
+      }
     }
+  }
 
+  boolean isExist() {
+    if (life < 0) {
+      return false;
+    } else {
+      return true;
+    }
+  }
+}
+
+boolean CheckMan( float Tamax, float Tamay, float Blockx, float Blocky) { //Block&Bullet
+  float SankakuX, SankakuY, SankakuR;
+  SankakuX = abs(Tamax - Blockx);
+  SankakuY = abs(Tamay - Blocky); 
+  SankakuR = 30/2 + 15/2; //Block size touituka(30/2), Tama Hankei sansyou
+  return ( sqrt( sq(SankakuX) + sq(SankakuY) ) < SankakuR );
+}
+boolean CheckMan2( float Tamax, float Tamay, float Blockx, float Blocky) { //Block&Player
+  float SankakuX, SankakuY, SankakuR;
+  SankakuX = abs(Tamax - Blockx);
+  SankakuY = abs(Tamay - Blocky); 
+  SankakuR = 30/2 + 30/2; //Block size touituka(30/2), Player Hankei sansyou
+  return ( sqrt( sq(SankakuX) + sq(SankakuY) ) < SankakuR );
 }
 
 boolean leftKeyDown, rightKeyDown, upKeyDown, downKeyDown;
-void keyPressed(){
-    if(keyCode == 'A'){
-        leftKeyDown = true;
-    }else if(keyCode == 'D'){
-        rightKeyDown = true;
-    }else if(keyCode == 'W'){
-        upKeyDown = true;
-    }else if(keyCode == 'S'){
-        downKeyDown = true;
-    }
+void keyPressed() {
+  if (keyCode == 'A') {
+    leftKeyDown = true;
+  } else if (keyCode == 'D') {
+    rightKeyDown = true;
+  } else if (keyCode == 'W') {
+    upKeyDown = true;
+  } else if (keyCode == 'S') {
+    downKeyDown = true;
+  }
 }
 
-void keyReleased(){
-    if(keyCode == 'A'){
-        leftKeyDown = false;
-    }else if(keyCode == 'D'){
-        rightKeyDown = false;
-    }else if(keyCode == 'W'){
-        upKeyDown = false;
-    }else if(keyCode == 'S'){
-        downKeyDown = false;
-    }
+void keyReleased() {
+  if (keyCode == 'A') {
+    leftKeyDown = false;
+  } else if (keyCode == 'D') {
+    rightKeyDown = false;
+  } else if (keyCode == 'W') {
+    upKeyDown = false;
+  } else if (keyCode == 'S') {
+    downKeyDown = false;
+  }
 }
 
-/*
-boolean Check(Block en1, Bullet en2){
-          float dx,dy,dr;
-          dx= abs(en1.x - en2.x);
-          dy = abs(en1.y - en2.y); 
-          dr = en1.WIDTHH/2 + en2.r/2;
-          
-          return ( sqrt( sq(dx) + sq(dy) ) < dr );
-        }
-*/
 abstract class Block {
-    protected float x, y;
-    protected float angle;
-    abstract void display();
+  protected float x, y;
+  protected float angle;
+  abstract void show();
+  int HP;
 }
 
+//float Recx, Recy =0;
 
-class Rectangle extends Block {
+class Rectangle4 extends Block {
 
-    final int WIDTH = 30;
-    //final int WIDTH = int(random(0,30));
-    color fillColor = color(255,232,105);
+  final int WIDTH = 30;
+  //final int WIDTH = int(random(0,30));
+  color fillColor = color(255, 232, 105);
 
-    Rectangle(float x, float y){
-        this.x = x;
-        this.y = y;
-        this.angle = random(TWO_PI);
-    }
+  Rectangle4(float x, float y, int HP) {
+    this.x = x;
+    this.y = y;
+    this.angle = random(TWO_PI);
+    this.HP = HP;
+  }
 
-    void display(){
-      
-        fill(fillColor);
-        stroke(93);
-        strokeWeight(2);
+  void show() {
 
-        pushMatrix();
+    fill(fillColor);
+    stroke(93);
+    strokeWeight(2);
 
-        translate(x,y);
-        rotate(angle);
-        rect(0,0,WIDTH,WIDTH,1);
+    pushMatrix();
 
-        popMatrix();
-        
-        /*
-        if(Check(Block,Bullet)){
-          println("HIT");
-        }
-        */
-        //println(HP);
-    }
+    translate(x, y);
+    rotate(angle);
+    rect(0, 0, WIDTH, WIDTH, 1);
 
+    popMatrix();
+  }
 }
 
-class Triangle extends Block {
+class Triangle3 extends Block {
 
-    final int WIDTH = 20;
-    color fillColor = color(252,118,119);
+  final int WIDTH = 30;
+  color fillColor = color(252, 118, 119);
 
-    Triangle(float x, float y){
-        this.x = x;
-        this.y = y;
-        this.angle = random(TWO_PI);
-    }
+  Triangle3(float x, float y, int HP) {
+    this.x = x;
+    this.y = y;
+    this.angle = random(TWO_PI);
+    this.HP = HP;
+  }
 
-    void display(){
-        fill(fillColor);
-        stroke(93);
-        strokeWeight(2);
+  void show() {
+    fill(fillColor);
+    stroke(93);
+    strokeWeight(2);
 
-        pushMatrix();
+    pushMatrix();
 
-        translate(x,y);
-        rotate(angle);
-        triangle(WIDTH+cos(0),WIDTH*sin(0),WIDTH*cos(TWO_PI/3),WIDTH*sin(TWO_PI/3),WIDTH*cos(TWO_PI/3*2),WIDTH*sin(TWO_PI/3*2));
+    translate(x, y);
+    rotate(angle);
+    triangle(WIDTH+cos(0), WIDTH*sin(0), WIDTH*cos(TWO_PI/3), WIDTH*sin(TWO_PI/3), WIDTH*cos(TWO_PI/3*2), WIDTH*sin(TWO_PI/3*2));
 
-        popMatrix();
-    }
-
+    popMatrix();
+  }
 }
 
-class Pentagon extends Block {
+class Pentagon5 extends Block {
 
-    final int WIDTH = 25;
-    color fillColor = color(118,141,252);
+  final int WIDTH = 30;
+  color fillColor = color(118, 141, 252);
 
-    Pentagon(float x, float y){
-        this.x = x;
-        this.y = y;
-        this.angle = random(TWO_PI);
+  Pentagon5(float x, float y, int HP) {
+    this.x = x;
+    this.y = y;
+    this.angle = random(TWO_PI);
+    this.HP = HP;
+  }
+
+  void show() {
+    fill(fillColor);
+    stroke(93);
+    strokeWeight(2);
+
+    pushMatrix();
+
+    translate(x, y);
+    rotate(angle);
+    beginShape();
+    for (int i = 0; i < 5; i++) {
+      vertex(WIDTH*cos(TWO_PI/5*i), WIDTH*sin(TWO_PI/5*i));
     }
+    endShape(CLOSE);
 
-    void display(){
-        fill(fillColor);
-        stroke(93);
-        strokeWeight(2);
-
-        pushMatrix();
-
-        translate(x,y);
-        rotate(angle);
-        beginShape();
-        for(int i = 0; i < 5; i++){
-            vertex(WIDTH*cos(TWO_PI/5*i), WIDTH*sin(TWO_PI/5*i));
-        }
-        endShape(CLOSE);
-
-        popMatrix();
-
-    }
+    popMatrix();
+  }
 }
 
-class Hexagon extends Block {
-    final int WIDTH = 30;
-    color fillColor = color(46, 204, 113);
+class Hexagon6 extends Block {
+  final int WIDTH = 30;
+  color fillColor = color(46, 204, 113);
 
-    Hexagon(float x, float y){
-        this.x = x;
-        this.y = y;
-        this.angle = random(TWO_PI);
+  Hexagon6(float x, float y, int HP) {
+    this.x = x;
+    this.y = y;
+    this.angle = random(TWO_PI);
+    this.HP = HP;
+  }
+  void show() {
+    fill(fillColor);
+    stroke(93);
+    strokeWeight(2);
+
+    pushMatrix();
+
+    translate(x, y);
+    rotate(angle);
+    beginShape();
+    for (int i = 0; i < 6; i++) {
+      vertex(WIDTH*cos(TWO_PI/6*i), WIDTH*sin(TWO_PI/6*i));
     }
-    void display(){
-        fill(fillColor);
-        stroke(93);
-        strokeWeight(2);
+    endShape(CLOSE);
 
-        pushMatrix();
-
-        translate(x,y);
-        rotate(angle);
-        beginShape();
-        for(int i = 0; i < 6; i++){
-            vertex(WIDTH*cos(TWO_PI/6*i), WIDTH*sin(TWO_PI/6*i));
-        }
-        endShape(CLOSE);
-
-        popMatrix();
-
-    }
+    popMatrix();
+  }
 }
